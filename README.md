@@ -3,6 +3,8 @@ NeuralNetwork
 
 Neural Network class with backpropagation, arbitrary layers/hidden units, and completely vectorized for efficiency
 
+---------------------//--------------------------
+
 MISC NOTES: 
 
 The Neural Network class that NeuralNetwork.py creates a Neural Network with the following as inputs:
@@ -10,6 +12,12 @@ The Neural Network class that NeuralNetwork.py creates a Neural Network with the
 - X (data): X is the mXn array of input data where the (i,j) element is the j-th feature of the i-th element
 - y (labels): y is the mX1 array of input labels
 - lam (regularization): lam is the regularization parameter of the cost function. See nnCost for more details in NeuralNetwork.py
+
+---------------------//--------------------------
+
+EXAMPLE:
+
+The example.py file contains a script to train a NN on some of the MNIST datset (http://yann.lecun.com/exdb/mnist/). 
 
 ---------------------//--------------------------
 
