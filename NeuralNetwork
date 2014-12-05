@@ -128,6 +128,10 @@ class NueralNetwork:
 
         return toreturn
     
+    def optimize(self,guess,optMethod='CG',maxiterations=50,display=False):
+        opt = optimize.minimize(self.nnCost,guess,method=optMethod,jac=self.nnCostDer,options={'maxiter':maxiterations,'disp':display})
+        return opt
+    
     #Forward propagation to compute layers
     def forwardPropagation(self,Xprop,Thetas):
         currentLayer = Xprop
