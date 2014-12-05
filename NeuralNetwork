@@ -1,9 +1,9 @@
 # NOTES:
-#     - Below we have code that creates a Neural Network class 
+#     - below we have code that creates a Neural Network class 
 #     - cost function is a sigmoid-log cost function for Neural Networks
-#     - utilization backpropagation
-#     - CG optimization is used through optimize
-#     - Completely vectorized implementation
+#     - utilizing backpropagation
+#     - CG optimization is used through optimize unless specified
+#     - completely vectorized implementation
 #
 #     by Alejandro Cortese
 #     email ajc383@cornell.edu
@@ -11,7 +11,6 @@
 import numpy as np
 import scipy as sp
 import scipy.io
-import time
 from scipy import optimize
 from scipy.optimize import minimize
 
