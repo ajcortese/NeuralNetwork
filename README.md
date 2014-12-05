@@ -11,5 +11,13 @@ The Neural Network class that NeuralNetwork.py creates a Neural Network with the
 - y (labels): y is the mX1 array of input labels
 - lam (regularization): lam is the regularization parameter of the cost function. See nnCost for more details
 
+---------------------//--------------------------
+
+IMPROVEMENTS:
+
+Please feel free to email me or post here any suggestions for efficiency gains that would be significant (>=2X) or if you have suggestions/question/comments about the code. I mainly wrote this code because I couldn't find open source and efficient NN that was vectorized and could have arbitrary layers/units, so if you have any further improvements I'd be more than happy to incoorporate them.
+
+Happy hacking,
+Alejandro
 
 
