@@ -15,6 +15,7 @@ from scipy import optimize
 from scipy.optimize import minimize
 
 def sigmoid(z):
+    np.seterr(over='ignore')
     return 1./(1 + np.exp(-z))
 
 def sigmoidGrad(z):
