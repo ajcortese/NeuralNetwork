@@ -15,7 +15,7 @@ The Neural Network class that NeuralNetwork.py creates a Neural Network with the
 
 IMPROVEMENTS:
 
-Please feel free to email me or post here about any suggestions for efficiency gains that would be significant (>=2X) or if you have errors/suggestions/question/comments about the code. I mainly wrote this code because I couldn't find open source and efficient NN that was vectorized and could have arbitrary layers/units, so if you have any further improvements I'd be more than happy to incoorporate them. I also wrote in over the course of a day so forgive any minor bugs or lack of comments. 
+Please feel free to email me or post here about any suggestions for efficiency gains that would be significant (>=2X) or if you have errors/suggestions/question/comments about the code. I mainly wrote this code because I couldn't find open source and efficient NN that was vectorized and could have arbitrary layers/units, so if you have any further improvements I'd be more than happy to incoorporate them. I also wrote this over the course of a day so forgive any minor bugs or lack of comments. 
 
 Happy hacking,
 Alejandro
