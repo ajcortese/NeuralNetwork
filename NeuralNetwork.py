@@ -11,12 +11,13 @@
 import numpy as np
 import scipy as sp
 import scipy.io
+import time
 from scipy import optimize
 from scipy.optimize import minimize
 
 def sigmoid(z):
-    np.seterr(over='ignore')
-    return 1./(1 + np.exp(-z))
+    #np.seterr(over='ignore')
+    return 1. / (1. + np.exp(-z))
 
 def sigmoidGrad(z):
     return sigmoid(z)*(1 - sigmoid(z))
@@ -24,6 +25,9 @@ def sigmoidGrad(z):
 #Randomly initializes weights for theta matrices
 def randInitialWeights(Lin, Lout, epsilon_init):
     return np.random.random((Lout,Lin+1))*2*epsilon_init - epsilon_init
+    
+def addBias(X):
+    return np.append(np.ones([np.shape(X)[0],1]),X,axis=1)
 
 #Rolls back up thetas
 def reshapeThetas(nnParams,LayerLengths):
@@ -43,7 +47,7 @@ class NueralNetwork:
         #[s0, s1, ...,sj,...] where sj is the number of units in the j-th layer
         self.LayerLengths = LayerLengths  
         
-        self.X = np.append(np.ones([np.shape(X)[0],1]),X,axis=1) #adds bias components
+        self.X = X #data
         self.y = y #labels
         self.lam = lam #regularization lambda
         
@@ -95,21 +99,27 @@ class NueralNetwork:
         h = aLayers[-1]
 
         #Backpropagation
-        currentd = aLayers[-1].T - self.Y
+        
+        #Add bias columns
+        for i in range(len(aLayers) - 1):
+            aLayers[i] = addBias(aLayers[i])
+            
+        currentd = (aLayers[-1] - self.Y.T) * sigmoidGrad(zLayers[-1])
         Deltas = []
-        Deltas.append(np.einsum('ji,ik',currentd,aLayers[-2]))
-        for j in range(2,len(aLayers)):
-            zj = zLayers[-j]
-            Theta = Thetas[-j + 1]
+        Deltas.append(np.einsum('kj,ki->ij',aLayers[-2],currentd))
+        
+        for l in range(self.numLayers-1,1,-1):
+            zl = zLayers[l - 1]
+            Thetal = Thetas[l - 1]
 
-            zj = np.hstack((np.ones((np.shape(zj)[0],1)),zj))
-            deltaj = Theta.T.dot(currentd) * sigmoidGrad(zj.T)
-            currentd = deltaj[1:,:]
-
-            Delta = np.einsum('ji,ik',deltaj,aLayers[-j - 1])
-            Delta = Delta[1:,:]
+            zl = addBias(zl)
+            deltal = np.einsum('ji,kj->ki',Thetal,currentd) * sigmoidGrad(zl)
+            deltal = deltal[:,1:]
+            
+            Delta = np.einsum('ki,kj->ij',deltal,aLayers[l - 2])
             Deltas.insert(0,Delta)
-
+            currentd = deltal
+        
         #Unregularized
         for i in range(len(Thetas_grad)):
             Thetas_grad[i] = (1./self.m)*Deltas[i]
@@ -126,6 +136,10 @@ class NueralNetwork:
         for Theta_grad in Thetas_grad:
             toreturn = np.append(toreturn,Theta_grad.ravel())
 
+        #Grad checking
+        #errors = toreturn - self.gradChecking(nnParams)
+        #print np.mean(errors)
+        
         return toreturn
     
     def optimize(self,guess,optMethod='CG',maxiterations=50,display=False):
@@ -133,21 +147,21 @@ class NueralNetwork:
         return opt
     
     #Forward propagation to compute layers
-    def forwardPropagation(self,Xprop,Thetas):
-        currentLayer = Xprop
+    def forwardPropagation(self,X,Thetas):
+        acurrent = X
         zLayers = [np.array([0])]
-        aLayers = [Xprop]
-        for j in range(self.numLayers - 1):
-            zj = currentLayer.dot(Thetas[j].T)
-            zLayers.append(zj)
-
-            aj = sigmoid(zj)
-            #Add bias component when needed
-            if j != self.numLayers - 2:
-                aj = np.append(np.ones([np.shape(aj)[0],1]),aj,axis=1)
-            aLayers.append(aj)
+        aLayers = [X]
+        for l in range(self.numLayers - 1):
+            #Add bias column
+            acurrent = addBias(acurrent)
             
-            currentLayer = aj
+            Thetal = Thetas[l]
+            
+            zl = np.einsum('jk,ik',Thetal,acurrent)
+            zLayers.append(zl)
+
+            acurrent = sigmoid(zl)
+            aLayers.append(acurrent)
             
         return zLayers,aLayers
     
@@ -171,8 +185,6 @@ class NueralNetwork:
     
     #DetermineAccuracy
     def determineAccuracy(self,nnParams,Xtest,ytest):
-        #Add bias components
-        Xtest = np.append(np.ones([np.shape(Xtest)[0],1]),Xtest,axis=1)
         
         #Determine predictions and compare to labels
         predictions = self.predict(nnParams,Xtest)
@@ -185,7 +197,19 @@ class NueralNetwork:
         accuracy = sucesscount*100./len(ytest)
         
         #Print results
-        print 'Success rate of: ' + str(accuracy) + '%'
+        print 'Success rate of: ' + str('%.3f' %accuracy) + '%'
         
         #Return predictions and accuracy
         return predictions,accuracy
+        
+    def gradChecking(self,nnParams):
+        numgrad = np.zeros(len(nnParams))
+        perturb = np.zeros(len(nnParams))
+        ep = 1E-5
+        for i in range(100):
+            perturb[i] = ep 
+            loss1 = self.nnCost(nnParams - perturb)
+            loss2 = self.nnCost(nnParams + perturb)
+            numgrad[i] = (loss2 - loss1)/(2*ep)
+            perturb[i] = 0
+        return numgrad
