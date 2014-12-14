@@ -11,7 +11,6 @@
 import numpy as np
 import scipy as sp
 import scipy.io
-import time
 from scipy import optimize
 from scipy.optimize import minimize
 
@@ -26,12 +25,13 @@ def sigmoidGrad(z):
 def randInitialWeights(Lin, Lout, epsilon_init):
     return np.random.random((Lout,Lin+1))*2*epsilon_init - epsilon_init
     
+#Add bias components to array
 def addBias(X):
     return np.append(np.ones([np.shape(X)[0],1]),X,axis=1)
 
 #Rolls back up thetas
 def reshapeThetas(nnParams,LayerLengths):
-    s = LayerLengths
+    s = np.copy(LayerLengths)
     numLayers = len(s)
     totalParamsBefore = 0
     Thetas = []
@@ -55,7 +55,6 @@ class NueralNetwork:
         self.numLayers = len(LayerLengths) #number of layers
         self.m = np.shape(X)[0] #number of samples
         
-        
         #Make labels into unit vectors
         Y = np.zeros([LayerLengths[-1],np.shape(y)[0]])
         for i in range(len(y)):
@@ -68,17 +67,18 @@ class NueralNetwork:
         #Roll back up Thetas
         Thetas = reshapeThetas(nnParams,self.LayerLengths)
         
-        #Forward Propagation
+        '''Forward Propagation'''
         zLayers, aLayers = self.forwardPropagation(self.X,Thetas)
         h = aLayers[-1]
 
-        #Compute cost without regularization
+        '''Compute cost without regularization'''
         J = (1./self.m)*(np.einsum('ij,ji',-self.Y,np.log(h)) - np.einsum('ij,ji',1 - self.Y,np.log(1 - h)))
 
+        '''L2 Regularization'''
         #Theta1 and Theta2 summations for regularization
         for i in range(len(Thetas)):
-            Theta = Thetas[i]
-            Theta[0,:] = 0
+            Theta = np.copy(Thetas[i])
+            Theta[:,0] = 0
             TSum = np.sum(Theta**2)
             J += (self.lam/(2.*self.m))*(TSum)
 
@@ -90,42 +90,44 @@ class NueralNetwork:
         
         #Roll back up thetas
         Thetas = reshapeThetas(nnParams,self.LayerLengths)
+        
+        #Set thetas grad to zeros in the shape of Thetas
         Thetas_grad = []
         for i in range(len(Thetas)):
             Thetas_grad.append(np.zeros(np.shape(Thetas[i])))
 
-        #Forward propagation
+        '''Forward propagation'''
         zLayers,aLayers = self.forwardPropagation(self.X,Thetas)
-        h = aLayers[-1]
 
-        #Backpropagation
-        
+        '''Backpropagation'''
         #Add bias columns
         for i in range(len(aLayers) - 1):
             aLayers[i] = addBias(aLayers[i])
             
-        currentd = (aLayers[-1] - self.Y.T) * sigmoidGrad(zLayers[-1])
+        currentd = (aLayers[-1] - self.Y.T) 
         Deltas = []
-        Deltas.append(np.einsum('kj,ki->ij',aLayers[-2],currentd))
+        Deltas.append(np.einsum('ij,ik',currentd,aLayers[-2],order='A',casting='no'))
         
         for l in range(self.numLayers-1,1,-1):
-            zl = zLayers[l - 1]
-            Thetal = Thetas[l - 1]
+            zl = np.copy(zLayers[l - 1])
+            Thetal = np.copy(Thetas[l - 1])
 
             zl = addBias(zl)
-            deltal = np.einsum('ji,kj->ki',Thetal,currentd) * sigmoidGrad(zl)
+            #print np.shape(zl),np.shape(np.einsum('ij,hi',Thetal,currentd))
+            deltal = np.einsum('ij,hi',Thetal,currentd,order='A',casting='no') * sigmoidGrad(zl)
             deltal = deltal[:,1:]
             
-            Delta = np.einsum('ki,kj->ij',deltal,aLayers[l - 2])
+            Delta = np.einsum('ij,ik',deltal,aLayers[l - 2],order='A',casting='no')
             Deltas.insert(0,Delta)
-            currentd = deltal
+            currentd = np.copy(deltal)
         
         #Unregularized
         for i in range(len(Thetas_grad)):
             Thetas_grad[i] = (1./self.m)*Deltas[i]
-
+        
+        '''Regularization'''
         #Regularizing but not regularize bias column
-        regs = Thetas
+        regs = np.copy(Thetas)
         for i in range(len(regs)):
             reg = (self.lam/self.m)*regs[i]
             reg[:,0] = np.zeros([np.shape(Thetas[i])[0]])
@@ -136,28 +138,36 @@ class NueralNetwork:
         for Theta_grad in Thetas_grad:
             toreturn = np.append(toreturn,Theta_grad.ravel())
 
+        '''Debugging Section'''
         #Grad checking
         #errors = toreturn - self.gradChecking(nnParams)
-        #print np.mean(errors)
+        #print np.mean(errors[:100])
+        
+        #dictionary = {'Theta1':Thetas[0],'Theta2':Thetas[1],
+        #          'Delta1':Deltas[0],'Delta2':Deltas[1],
+        #          'Theta1_grad':Thetas_grad[0],'Theta2_grad':Thetas_grad[1],
+        #          'a2':aLayers[-2],'z2':zLayers[-2],'z3':zLayers[-2],'a3':aLayers[-1],
+        #          'X':self.X,'Y':self.Y,'der':toreturn}
         
         return toreturn
     
+    #Optimize NN based on nnCost and nnDer
     def optimize(self,guess,optMethod='CG',maxiterations=50,display=False):
         opt = optimize.minimize(self.nnCost,guess,method=optMethod,jac=self.nnCostDer,options={'maxiter':maxiterations,'disp':display})
         return opt
     
     #Forward propagation to compute layers
     def forwardPropagation(self,X,Thetas):
-        acurrent = X
+        acurrent = np.copy(X)
         zLayers = [np.array([0])]
-        aLayers = [X]
+        aLayers = [np.copy(X)]
         for l in range(self.numLayers - 1):
             #Add bias column
             acurrent = addBias(acurrent)
             
-            Thetal = Thetas[l]
+            Thetal = np.copy(Thetas[l])
             
-            zl = np.einsum('jk,ik',Thetal,acurrent)
+            zl = np.einsum('ik,jk->ji',Thetal,acurrent,order='A',casting='no')
             zLayers.append(zl)
 
             acurrent = sigmoid(zl)
@@ -172,7 +182,7 @@ class NueralNetwork:
         #Roll back up Thetas
         Thetas = reshapeThetas(nnParams,self.LayerLengths)
 
-        #Forward propagation
+        '''Forward propagation'''
         zLayers,aLayers = self.forwardPropagation(Xtest,Thetas)
         h = aLayers[-1]
         
@@ -202,10 +212,11 @@ class NueralNetwork:
         #Return predictions and accuracy
         return predictions,accuracy
         
+    #Compute grad numerically for first 100 elements
     def gradChecking(self,nnParams):
         numgrad = np.zeros(len(nnParams))
         perturb = np.zeros(len(nnParams))
-        ep = 1E-5
+        ep = 1.E-4
         for i in range(100):
             perturb[i] = ep 
             loss1 = self.nnCost(nnParams - perturb)
