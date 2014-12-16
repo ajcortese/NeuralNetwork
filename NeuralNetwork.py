@@ -62,7 +62,7 @@ class NueralNetwork:
         self.Y = Y
         
     # Compute cost for NN
-    def nnCost(self,nnParams):
+    def nnCost(self,nnParams,miniBatch=False,miniBatchSize=50):
         
         #Roll back up Thetas
         Thetas = reshapeThetas(nnParams,self.LayerLengths)
@@ -83,10 +83,11 @@ class NueralNetwork:
             J += (self.lam/(2.*self.m))*(TSum)
 
         #return the cost
+        print J
         return J
 
     #Compute derivative of NN using back propagation
-    def nnCostDer(self,nnParams):
+    def nnCostDer(self,nnParams,miniBatch=False,miniBatchSize=50):
         
         #Roll back up thetas
         Thetas = reshapeThetas(nnParams,self.LayerLengths)
@@ -96,15 +97,26 @@ class NueralNetwork:
         for i in range(len(Thetas)):
             Thetas_grad.append(np.zeros(np.shape(Thetas[i])))
 
+        X = np.copy(self.X)
+        Y = np.copy(self.Y.T)
+
+        '''Mini Batch'''
+        if miniBatch:
+            perm = np.random.permutation(self.m)
+            miniBatchSamples = perm[:miniBatchSize]
+            X = X[miniBatchSamples,:]
+            Y = Y[miniBatchSamples,:]
+            
         '''Forward propagation'''
-        zLayers,aLayers = self.forwardPropagation(self.X,Thetas)
+        zLayers,aLayers = self.forwardPropagation(X,Thetas)
 
         '''Backpropagation'''
         #Add bias columns
         for i in range(len(aLayers) - 1):
             aLayers[i] = addBias(aLayers[i])
             
-        currentd = (aLayers[-1] - self.Y.T) 
+        
+        currentd = (aLayers[-1] - Y) 
         Deltas = []
         Deltas.append(np.einsum('ij,ik',currentd,aLayers[-2],order='A',casting='no'))
         
@@ -152,8 +164,8 @@ class NueralNetwork:
         return toreturn
     
     #Optimize NN based on nnCost and nnDer
-    def optimize(self,guess,optMethod='CG',maxiterations=50,display=False):
-        opt = optimize.minimize(self.nnCost,guess,method=optMethod,jac=self.nnCostDer,options={'maxiter':maxiterations,'disp':display})
+    def optimize(self,guess,optMethod='CG',maxiterations=50,display=False,miniB=False,miniBSize=50):
+        opt = optimize.minimize(self.nnCost,guess,args=(miniB,miniBSize),method=optMethod,jac=self.nnCostDer,options={'maxiter':maxiterations,'disp':display})
         return opt
     
     #Forward propagation to compute layers
@@ -182,7 +194,7 @@ class NueralNetwork:
         #Roll back up Thetas
         Thetas = reshapeThetas(nnParams,self.LayerLengths)
 
-        '''Forward propagation'''
+        #Forward propagation
         zLayers,aLayers = self.forwardPropagation(Xtest,Thetas)
         h = aLayers[-1]
         
