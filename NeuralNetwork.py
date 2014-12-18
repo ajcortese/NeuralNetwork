@@ -42,7 +42,7 @@ def reshapeThetas(nnParams,LayerLengths):
     return Thetas
 
 #Creates a nueral network class of arbitraty layers and units according to LayerLengths
-class NueralNetwork:
+class NeuralNetwork:
     def __init__(self,LayerLengths,X,y,lam):
         #[s0, s1, ...,sj,...] where sj is the number of units in the j-th layer
         self.LayerLengths = LayerLengths  
