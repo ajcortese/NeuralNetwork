@@ -50,7 +50,7 @@ t = getTime()
 # Train neural network (optimizes using conjugate gradient)
 lam = 0.1
 print 'Optimizing with lambda =' + str(lam) + '...'
-NN = NueralNetwork(s,X,y,lam)
+NN = NeuralNetwork(s,X,y,lam)
 opt = NN.optimize(guess)
 
 dt = getTime() - t
